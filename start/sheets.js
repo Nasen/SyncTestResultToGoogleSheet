@@ -75,6 +75,11 @@ var SUMMARY_COLUMNS = [
     {field: 'skip', header: 'Skip'}
 ];
 
+var DETAILS_COLUMNS=[
+    {field: 'tc_name', header: 'TestCase'},
+    {field: 'te_result', header: 'Result'}
+]
+
 SheetsHelper.prototype.createSpreadsheet = function (title, callback) {
     var self = this;
     var request = {
@@ -198,7 +203,7 @@ SheetsHelper.prototype.sync = function (spreadsheetId, sheetId, feedbacks, callb
 };
 
 
-SheetsHelper.prototype.updateIOSReport = function (spreadsheetId, summary, results, callback) {
+SheetsHelper.prototype.updateIOSReport = function (spreadsheetId, summary, details, callback) {
 
     var requestForGet = {
         spreadsheetId: spreadsheetId,
@@ -219,7 +224,7 @@ SheetsHelper.prototype.updateIOSReport = function (spreadsheetId, summary, resul
         var detail_sheet_rows = res.sheets[1].data[0].rowData.length;
         var detail_sheet_colums = res.sheets[1].data[0].rowData[0].values.length;
 
-        var requestForUpdateSummary =[];
+        var requestForUpdateSummary = [];
         requestForUpdateSummary.push({
             updateCells: {
                 start: {
@@ -232,6 +237,19 @@ SheetsHelper.prototype.updateIOSReport = function (spreadsheetId, summary, resul
             }
         });
 
+        var requestForUpdateDetails = [];
+        requestForUpdateDetails.push({
+            updateCells: {
+                start: {
+                    sheetId: detail_sheetID,
+                    rowIndex: 1,
+                    columnIndex: 0,
+                },
+                rows: buildRowsForTestDetails(details),
+                fields: '*'
+            }
+        });
+
         // Send the batchUpdate request.
         var updateSummaryRequest = {
             spreadsheetId: spreadsheetId,
@@ -239,12 +257,23 @@ SheetsHelper.prototype.updateIOSReport = function (spreadsheetId, summary, resul
                 requests: requestForUpdateSummary
             }
         };
+        var updateDetailsRequest = {
+            spreadsheetId: spreadsheetId,
+            resource: {
+                requests: requestForUpdateDetails
+            }
+        };
 
         service.spreadsheets.batchUpdate(updateSummaryRequest, function (err, res) {
             if (err) {
                 callback(err);
             }
-            return callback();
+            service.spreadsheets.batchUpdate(updateDetailsRequest, function (err,res) {
+                if(err){
+                    callback(err)
+                }
+                return callback();
+            })
         })
         //JSON.stringify(response,null,2);
     })
@@ -327,13 +356,13 @@ function buildRowsForTestSummary(summary) {
 
     return summary.map(function (summary) {
         var cells = SUMMARY_COLUMNS.map(function (column) {
-            if(column.field=="date"){
+            if (column.field == "date") {
                 return {
                     userEnteredValue: {
                         stringValue: summary[column.field].toString()
                     }
                 }
-            }else{
+            } else {
                 return {
                     userEnteredValue: {
                         numberValue: summary[column.field]
@@ -341,6 +370,23 @@ function buildRowsForTestSummary(summary) {
                 };
             }
 
+        });
+
+        console.log(JSON.stringify(cells));
+        return {
+            values: cells
+        };
+    });
+}
+function buildRowsForTestDetails(details) {
+
+    return details.map(function (detail) {
+        var cells = DETAILS_COLUMNS.map(function (column) {
+            return{
+                userEnteredValue: {
+                    stringValue: detail[column.field]
+                }
+            }
         });
 
         console.log(JSON.stringify(cells));
