@@ -127,4 +127,103 @@ router.post('/updateReport/ios', function (req, res, next) {
     });
 });
 
+router.post('/updateReport/android', function (req, res, next) {
+    var results;
+    var date = new Date().toISOString().split("T")[0];
+
+    var spreadsheetID = "16ZOEVVwmAgKHtc5RDnsqfqIhP1418128LxrlteFvH3o";
+    var totalNum = 0, passedNum = 0, failedNum = 0, skipNum = 0;
+    var helper = new SheetsHelper();
+
+    /*    //get all passed case number
+     Sequelize.Promise.all(models.test_result.findAll(
+     {
+     attributes: ['tc_name', 'te_result'],
+     where: {
+     te_platform: 'IOS',
+     te_result: 'PASS',
+     te_start_time: {
+     $gt: '2017-05-18 00:00:01'
+     }
+     }
+     })).then(function (results) {
+     passedNum = results.length;
+     //get all failed case number
+     Sequelize.Promise.all(models.test_result.findAll(
+     {
+     attributes: ['tc_name', 'te_result'],
+     where: {
+     te_platform: 'IOS',
+     te_result: 'FAIL',
+     te_start_time: {
+     $gt: '2017-05-18 00:00:01'
+     }
+     }
+     })).then(function (results) {
+     failedNum = results.length;
+     //get all skip case number
+     Sequelize.Promise.all(models.test_result.findAll(
+     {
+     attributes: ['tc_name', 'te_result'],
+     where: {
+     te_platform: 'IOS',
+     te_result: 'SKIP',
+     te_start_time: {
+     $gt: '2017-05-18 00:00:01'
+     }
+     }
+     })).then(function (results) {
+     skipNum = results.length;
+     });
+     });
+     });*/
+    var details = [];
+    Sequelize.Promise.all(models.test_result.findAll(
+        {
+            attributes: ['tc_name', 'te_result'],
+            where: {
+                te_platform: 'ANDROID',
+                te_start_time: {
+                    $gt: date
+                }
+            }
+        })).then(function (results) {
+
+        totalNum = results.length;
+        var x;
+        for (x in results) {
+            var tc_name = results[x].get("tc_name");
+            var te_result = results[x].get("te_result");
+            details.push({tc_name, te_result});
+            switch (results[x].get("te_result")) {
+                case "PASS":
+                    passedNum += 1;
+                    break;
+
+                case "FAIL":
+                    failedNum += 1;
+                    break;
+
+                case "SKIP":
+                    skipNum += 1;
+                    break;
+
+            }
+
+        }
+        var summary = [
+            {date: date, total: totalNum, pass: passedNum, fail: failedNum, skip: skipNum}
+        ]
+
+        console.log(JSON.stringify(summary));
+        helper.updateIOSReport(spreadsheetID, summary, details, function (err) {
+            if (err) {
+                return next(err);
+            }
+            return res.json(summary.concat(details));
+
+        })
+    });
+});
+
 module.exports = router;
