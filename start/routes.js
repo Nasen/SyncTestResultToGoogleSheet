@@ -85,7 +85,7 @@ router.post('/updateReport/ios', function (req, res, next) {
             where: {
                 te_platform: 'IOS',
                 te_start_time: {
-                    $gt: '2017-05-18 00:00:01'
+                    $gt: date
                 }
             }
         })).then(function (results) {
@@ -117,7 +117,7 @@ router.post('/updateReport/ios', function (req, res, next) {
         ]
 
         console.log(JSON.stringify(summary));
-        helper.updateIOSReport(spreadsheetID, summary, details, function (err) {
+        helper.generateTestReport(spreadsheetID, summary, details, function (err) {
             if (err) {
                 return next(err);
             }
@@ -216,7 +216,7 @@ router.post('/updateReport/android', function (req, res, next) {
         ]
 
         console.log(JSON.stringify(summary));
-        helper.updateIOSReport(spreadsheetID, summary, details, function (err) {
+        helper.generateTestReport(spreadsheetID, summary, details, function (err) {
             if (err) {
                 return next(err);
             }

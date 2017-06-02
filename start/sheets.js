@@ -75,7 +75,7 @@ var SUMMARY_COLUMNS = [
     {field: 'skip', header: 'Skip'}
 ];
 
-var DETAILS_COLUMNS=[
+var DETAILS_COLUMNS = [
     {field: 'tc_name', header: 'TestCase'},
     {field: 'te_result', header: 'Result'}
 ]
@@ -203,7 +203,7 @@ SheetsHelper.prototype.sync = function (spreadsheetId, sheetId, feedbacks, callb
 };
 
 
-SheetsHelper.prototype.updateIOSReport = function (spreadsheetId, summary, details, callback) {
+SheetsHelper.prototype.generateTestReport = function (spreadsheetId, summary, details, callback) {
 
     var requestForGet = {
         spreadsheetId: spreadsheetId,
@@ -222,7 +222,7 @@ SheetsHelper.prototype.updateIOSReport = function (spreadsheetId, summary, detai
 
         var detail_sheetID = res.sheets[1].properties.sheetId;
         var detail_sheet_rows = res.sheets[1].data[0].rowData.length;
-        var detail_sheet_colums = res.sheets[1].data[0].rowData[0].values.length;
+        var detail_sheet_columns = res.sheets[1].data[0].rowData[0].values.length;
 
         var requestForUpdateSummary = [];
         requestForUpdateSummary.push({
@@ -264,15 +264,36 @@ SheetsHelper.prototype.updateIOSReport = function (spreadsheetId, summary, detai
             }
         };
 
+        var clearDetailsSheetRequest = {
+            spreadsheetId: spreadsheetId,
+            resource: {
+                requests: {
+                    "deleteRange": {
+                        "range": {
+                            "sheetId": detail_sheetID,
+                            "startRowIndex": 1,
+                            "endRowIndex": detail_sheet_rows,
+                        },
+                        "shiftDimension": "ROWS"
+                    }
+                }
+            }
+        };
+
         service.spreadsheets.batchUpdate(updateSummaryRequest, function (err, res) {
             if (err) {
                 callback(err);
             }
-            service.spreadsheets.batchUpdate(updateDetailsRequest, function (err,res) {
-                if(err){
+            service.spreadsheets.batchUpdate(clearDetailsSheetRequest, function (err, res) {
+                if (err) {
                     callback(err)
                 }
-                return callback();
+                service.spreadsheets.batchUpdate(updateDetailsRequest, function (err, res) {
+                    if (err) {
+                        callback(err)
+                    }
+                    return callback();
+                })
             })
         })
         //JSON.stringify(response,null,2);
@@ -382,7 +403,7 @@ function buildRowsForTestDetails(details) {
 
     return details.map(function (detail) {
         var cells = DETAILS_COLUMNS.map(function (column) {
-            return{
+            return {
                 userEnteredValue: {
                     stringValue: detail[column.field]
                 }
